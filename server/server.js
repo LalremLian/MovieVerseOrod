@@ -58,30 +58,38 @@ app.use((err, req, res, next) => {
     });
 });
 
-// Connect to MongoDB and start server
+// Connect to MongoDB
 mongoose
     .connect(process.env.MONGO_URI)
     .then(() => {
         console.log('✅ Connected to MongoDB');
-        const server = app.listen(PORT, () => {
-            console.log(`🚀 Server running on http://localhost:${PORT}`);
-            console.log(`📡 Mode: ${process.env.NODE_ENV || 'development'}`);
-        });
-
-        // Graceful Shutdown Logic
-        process.on('SIGTERM', () => {
-            console.log('SIGTERM signal received: closing HTTP server');
-            server.close(() => {
-                console.log('HTTP server closed');
-                mongoose.connection.close(false, () => {
-                    console.log('MongoDB connection closed');
-                    process.exit(0);
-                });
-            });
-        });
     })
     .catch((err) => {
         console.error('❌ MongoDB connection error:', err.message);
-        process.exit(1);
     });
+
+// Middleware and Routes are already set up above...
+
+// Graceful Shutdown Logic (for local dev)
+const gracefulShutdown = (server) => {
+    process.on('SIGTERM', () => {
+        console.log('SIGTERM received: closing HTTP server');
+        server.close(() => {
+            mongoose.connection.close(false, () => {
+                process.exit(0);
+            });
+        });
+    });
+};
+
+// Start server only if not running on Vercel
+if (process.env.NODE_ENV !== 'production') {
+    const server = app.listen(PORT, () => {
+        console.log(`🚀 Server running on http://localhost:${PORT}`);
+    });
+    gracefulShutdown(server);
+}
+
+// CRITICAL: Export for Vercel
+module.exports = app;
 
