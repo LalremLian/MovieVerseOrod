@@ -34,18 +34,37 @@ app.use(cors(corsOptions));
 
 app.use(express.json());
 
-// Routes
-app.use('/api/users', userRoutes);
-app.use('/api/movies', movieRoutes);
+// Connection function for Serverless
+const connectDB = async () => {
+    if (mongoose.connection.readyState >= 1) return;
+    console.log('🔄 Connecting to MongoDB...');
+    return mongoose.connect(process.env.MONGO_URI);
+};
+
+// Middleware to ensure DB connection before every request
+app.use(async (req, res, next) => {
+    try {
+        await connectDB();
+        next();
+    } catch (err) {
+        console.error('❌ MongoDB Connection Error:', err.message);
+        res.status(500).json({ message: 'Database connection failed' });
+    }
+});
 
 // Root route
 app.get('/', (req, res) => {
     res.json({
         message: 'MovieVerse API is running 🎬',
         status: 'healthy',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        dbStatus: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
     });
 });
+
+// Routes
+app.use('/api/users', userRoutes);
+app.use('/api/movies', movieRoutes);
 
 // Error Handling Middleware
 app.use((err, req, res, next) => {
@@ -58,36 +77,12 @@ app.use((err, req, res, next) => {
     });
 });
 
-// Connect to MongoDB
-mongoose
-    .connect(process.env.MONGO_URI)
-    .then(() => {
-        console.log('✅ Connected to MongoDB');
-    })
-    .catch((err) => {
-        console.error('❌ MongoDB connection error:', err.message);
-    });
-
-// Middleware and Routes are already set up above...
-
-// Graceful Shutdown Logic (for local dev)
-const gracefulShutdown = (server) => {
-    process.on('SIGTERM', () => {
-        console.log('SIGTERM received: closing HTTP server');
-        server.close(() => {
-            mongoose.connection.close(false, () => {
-                process.exit(0);
-            });
-        });
-    });
-};
-
-// Start server only if not running on Vercel
+// Start server only if not running on Vercel (Local Dev)
 if (process.env.NODE_ENV !== 'production') {
-    const server = app.listen(PORT, () => {
-        console.log(`🚀 Server running on http://localhost:${PORT}`);
+    app.listen(PORT, () => {
+        console.log(`🚀 Server running locally on http://localhost:${PORT}`);
+        connectDB();
     });
-    gracefulShutdown(server);
 }
 
 // CRITICAL: Export for Vercel
