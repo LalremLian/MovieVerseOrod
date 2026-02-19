@@ -1,0 +1,21 @@
+{
+  "name": "movieverse-server",
+  "version": "1.0.0",
+  "description": "MovieVerse MERN Stack Backend",
+  "main": "server.js",
+  "scripts": {
+    "start": "cross-env NODE_ENV=production node server.js",
+    "dev": "cross-env NODE_ENV=development node server.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "compression": "^1.8.1",
+    "cors": "^2.8.5",
+    "cross-env": "^10.1.0",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "helmet": "^8.1.0",
+    "mongoose": "^8.10.1",
+    "morgan": "^1.10.1"
+  }
+}
